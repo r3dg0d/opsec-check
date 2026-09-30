@@ -18,7 +18,11 @@ fn main() {
             exit_codes::GENERAL_ERROR
         }
     };
-    std::process::exit(code);
+    std::process::exit(if opsec_check::process::interrupted() {
+        exit_codes::INTERRUPTED
+    } else {
+        code
+    });
 }
 
 fn real_main() -> anyhow::Result<i32> {
@@ -38,8 +42,8 @@ fn real_main() -> anyhow::Result<i32> {
         .init();
 
     ctrlc::set_handler(|| {
+        opsec_check::process::request_interrupt();
         eprintln!("\ninterrupted");
-        std::process::exit(exit_codes::INTERRUPTED);
     })?;
 
     let (cfg, cfg_path) = Config::load(cli.config.as_deref())?;

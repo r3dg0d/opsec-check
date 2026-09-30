@@ -35,8 +35,7 @@ pub fn run(cfg: &Config, dry_run: bool, no_metadata_sample: bool) -> AuditReport
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
         .or_else(|| {
-            std::process::Command::new("hostname")
-                .output()
+            crate::process::output("hostname", &[])
                 .ok()
                 .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         })

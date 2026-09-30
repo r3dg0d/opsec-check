@@ -62,7 +62,9 @@ Mullvad CLI hints require an explicit connected state on the first nonempty stat
 
 `dnscheck report --json` findings are imported with namespaced IDs, evidence, confidence, and limitations. Severity maps `info` to informational, `warning` to attention recommended, and `critical` to configuration issue, contributing to opsec-check exit codes. The current dnscheck report command returns exit 0 even when it reports warnings; nonzero exit statuses are command failures, not imported findings. Invalid, oversized (over 1 MiB), or unsupported reports produce an attention finding while local checks continue. No active probes are requested. Dry-run and `skip_sibling_tools` prevent this invocation.
 
-Other sibling tools still contribute sampled text. Subprocess execution time and captured output remain unbounded; the JSON validation limit does not bound process memory or duration.
+Other sibling tools still contribute sampled text. Audit commands on Unix run with closed stdin, a 10-second deadline per invocation, and a combined 1 MiB stdout/stderr capture limit. Timeout, overflow, read errors, and Ctrl+C terminate the command's dedicated process group and reap its direct child. DNS command failures become attention findings; other sampled command failures remain best-effort missing evidence. Commands retain their actual exit status. Ctrl+C returns exit 130 after probe cleanup. Non-Unix command probes are unavailable.
+
+These limits apply per command, not to the whole audit. Process-group cleanup cannot contain descendants that deliberately create another session or group, and does not undo external side effects. This is a read-only probe runner, not a process sandbox. See [Rust process groups](https://doc.rust-lang.org/std/os/unix/process/trait.CommandExt.html#tymethod.process_group).
 
 ## Config example
 

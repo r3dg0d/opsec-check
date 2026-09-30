@@ -1,7 +1,6 @@
 //! Sibling tool discovery (PATH only — no downloads).
 
 use crate::finding::ToolPresence;
-use std::process::Command;
 
 pub const SIBLINGS: &[&str] = &[
     "macrandom",
@@ -33,13 +32,13 @@ pub fn detect_siblings() -> Vec<ToolPresence> {
         .collect()
 }
 
-/// Run a sibling with args; return truncated stdout/stderr on success.
+/// Legacy text sample; preserve nonzero audit output, but discard runner failures.
 pub fn run_sibling(name: &str, args: &[&str], dry_run: bool) -> Option<String> {
     if dry_run {
         return Some(format!("[dry-run] would invoke: {name} {}", args.join(" ")));
     }
     let bin = which::which(name).ok()?;
-    let out = Command::new(&bin).args(args).output().ok()?;
+    let out = crate::process::output(&bin, args).ok()?;
     let mut text = String::from_utf8_lossy(&out.stdout).to_string();
     if text.trim().is_empty() {
         text = String::from_utf8_lossy(&out.stderr).to_string();
@@ -56,22 +55,13 @@ pub fn run_sibling(name: &str, args: &[&str], dry_run: bool) -> Option<String> {
 /// Unlike legacy text sampling, diagnostics and truncated data are not evidence.
 pub(crate) fn run_sibling_json(name: &str, args: &[&str]) -> Result<serde_json::Value, String> {
     let bin = which::which(name).map_err(|_| format!("{name} is no longer on PATH"))?;
-    let output = Command::new(bin)
-        .args(args)
-        .output()
-        .map_err(|err| format!("could not run {name}: {err}"))?;
+    let output = crate::process::output(bin, args)?;
     decode_json_output(&output)
 }
 
 fn decode_json_output(output: &std::process::Output) -> Result<serde_json::Value, String> {
     if !output.status.success() {
         return Err(format!("command failed ({})", output.status));
-    }
-    // Keep large reports intact up to this limit; never parse a truncated prefix.
-    // Command::output still captures the child in full; execution/capture bounds
-    // require a separate runner and are not implied by this validation limit.
-    if output.stdout.len() > 1024 * 1024 {
-        return Err("JSON report exceeds the 1 MiB validation limit".into());
     }
     serde_json::from_slice(&output.stdout).map_err(|_| "command did not return valid JSON".into())
 }

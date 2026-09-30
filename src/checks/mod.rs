@@ -61,7 +61,7 @@ pub(crate) fn cmd_out(bin: &str, args: &[&str]) -> Option<String> {
     if !crate::tools::command_exists(bin) {
         return None;
     }
-    let out = std::process::Command::new(bin).args(args).output().ok()?;
+    let out = crate::process::output(bin, args).ok()?;
     let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
     if s.is_empty() {
         let e = String::from_utf8_lossy(&out.stderr).trim().to_string();

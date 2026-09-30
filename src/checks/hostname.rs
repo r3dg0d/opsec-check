@@ -42,8 +42,7 @@ fn read_hostname() -> String {
     if let Some(s) = crate::checks::read_trimmed("/etc/hostname") {
         return s;
     }
-    std::process::Command::new("hostname")
-        .output()
+    crate::process::output("hostname", &[])
         .ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .filter(|s| !s.is_empty())
