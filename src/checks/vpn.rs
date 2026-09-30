@@ -8,8 +8,7 @@ pub fn check(ctx: &CheckCtx<'_>) -> Vec<Finding> {
 
     if tools::command_exists("mullvadctl") {
         if let Some(out) = tools::run_sibling("mullvadctl", &["status"], ctx.dry_run) {
-            let lower = out.to_lowercase();
-            if lower.contains("connected") {
+            if mullvad_connected(&out) {
                 active.push("mullvadctl:connected".to_string());
             }
             findings.push(
@@ -27,7 +26,7 @@ is up is basic OPSEC hygiene — it is not proof of anonymity.",
         }
     } else if tools::command_exists("mullvad") {
         if let Some(out) = crate::checks::cmd_out("mullvad", &["status"]) {
-            if out.to_lowercase().contains("connected") {
+            if mullvad_connected(&out) {
                 active.push("mullvad:connected".into());
             }
             findings.push(
@@ -100,4 +99,84 @@ egress IP. That may be fine for your threat model — flagging absence is not a 
     }
 
     findings
+}
+
+// Both supported CLIs put the current state on their first nonempty line.
+// Do not infer state from diagnostics, historical text, or substring matches.
+fn mullvad_connected(output: &str) -> bool {
+    let Some(line) = output.lines().map(str::trim).find(|line| !line.is_empty()) else {
+        return false;
+    };
+    let line = line.to_ascii_lowercase();
+    if let Some(state) = line.strip_prefix("state:") {
+        return state.trim() == "connected";
+    }
+    line == "connected"
+        || line
+            .strip_prefix("connected to ")
+            .is_some_and(|relay| !relay.trim().is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mullvad_connected;
+
+    #[test]
+    fn official_connected_status() {
+        assert!(mullvad_connected(
+            "Connected to se-mma-wg-001 in Stockholm, Sweden\nRelay: se-mma-wg-001"
+        ));
+        assert!(mullvad_connected("\n  CONNECTED  \n"));
+    }
+
+    #[test]
+    fn companion_connected_status() {
+        assert!(mullvad_connected(
+            "State: Connected\nRelay: se-mma-wg-001\n"
+        ));
+        assert!(mullvad_connected("  state: connected  \n"));
+    }
+
+    #[test]
+    fn disconnected_is_not_connected() {
+        for output in [
+            "Disconnected",
+            "State: Disconnected",
+            "Disconnected\nPreviously connected to a relay",
+        ] {
+            assert!(!mullvad_connected(output), "{output}");
+        }
+    }
+
+    #[test]
+    fn transitional_and_error_states_are_not_connected() {
+        for output in [
+            "Connecting",
+            "Disconnecting",
+            "State: Connecting",
+            "State: Error",
+            "Blocked: unable to connect",
+            "Error: not connected",
+        ] {
+            assert!(!mullvad_connected(output), "{output}");
+        }
+    }
+
+    #[test]
+    fn incidental_or_malformed_text_is_not_connected() {
+        for output in [
+            "not connected",
+            "Connectedness",
+            "State: Connectedness",
+            "State: Connected (previously)",
+            "Connected to ",
+            "Warning: connected before\nConnected to relay",
+            "[dry-run] would invoke: mullvadctl status",
+            "🌐 connected",
+            "",
+            "  \n",
+        ] {
+            assert!(!mullvad_connected(output), "{output}");
+        }
+    }
 }

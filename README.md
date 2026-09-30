@@ -42,7 +42,7 @@ Exit codes: `0` success / only informational · `2` attention recommended · `3`
 | Area | Notes |
 |------|--------|
 | Network identity | Sibling `netidentity` when present; local iface inventory |
-| VPN | Mullvad / WireGuard hints |
+| VPN | Explicit Mullvad connected status / WireGuard hints |
 | DNS | `/etc/resolv.conf` + sibling `dnscheck` |
 | MAC | Sysfs LAA bit + sibling `macrandom` |
 | Firewall | nft / ufw / firewalld best-effort |
@@ -57,6 +57,8 @@ Exit codes: `0` success / only informational · `2` attention recommended · `3`
 | Disk / swap encryption | lsblk / cryptsetup / `/proc/swaps` |
 | Removable storage | `/sys/block/*/removable`, media mounts |
 | NixOS | `/etc/nixos`, flakes, `/nix/store` |
+
+Mullvad CLI hints require an explicit connected state on the first nonempty status line. Disconnected, transitional, error, and unrecognized output do not count as connected. Interface hints remain best-effort and do not verify traffic routing or leak protection.
 
 ## Config example
 
