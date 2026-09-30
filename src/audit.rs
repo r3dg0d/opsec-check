@@ -51,7 +51,7 @@ pub fn run(cfg: &Config, dry_run: bool, no_metadata_sample: bool) -> AuditReport
         sibling_tools: tools::detect_siblings(),
         limitations: vec![
             "Read-only local heuristics; not a penetration test or anonymity guarantee.".into(),
-            "Sibling tool output is sampled when present; failures are non-fatal.".into(),
+            "DNS sibling findings are imported from JSON; other sibling output is sampled. DNS report failures are non-fatal attention findings.".into(),
             "No fake 0–100 privacy score is computed or implied.".into(),
             "Cloud metadata, corporate MDM, and browser WebRTC leaks need separate tooling.".into(),
             "Metadata sampling is shallow by design to avoid scanning huge home trees.".into(),

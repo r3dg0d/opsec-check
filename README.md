@@ -43,7 +43,7 @@ Exit codes: `0` success / only informational · `2` attention recommended · `3`
 |------|--------|
 | Network identity | Sibling `netidentity` when present; local iface inventory |
 | VPN | Explicit Mullvad connected status / WireGuard hints |
-| DNS | `/etc/resolv.conf` + sibling `dnscheck` |
+| DNS | `/etc/resolv.conf` + structured sibling `dnscheck` findings |
 | MAC | Sysfs LAA bit + sibling `macrandom` |
 | Firewall | nft / ufw / firewalld best-effort |
 | Listening services | `ss -tuln` heuristic |
@@ -59,6 +59,10 @@ Exit codes: `0` success / only informational · `2` attention recommended · `3`
 | NixOS | `/etc/nixos`, flakes, `/nix/store` |
 
 Mullvad CLI hints require an explicit connected state on the first nonempty status line. Disconnected, transitional, error, and unrecognized output do not count as connected. Interface hints remain best-effort and do not verify traffic routing or leak protection.
+
+`dnscheck report --json` findings are imported with namespaced IDs, evidence, confidence, and limitations. Severity maps `info` to informational, `warning` to attention recommended, and `critical` to configuration issue, contributing to opsec-check exit codes. The current dnscheck report command returns exit 0 even when it reports warnings; nonzero exit statuses are command failures, not imported findings. Invalid, oversized (over 1 MiB), or unsupported reports produce an attention finding while local checks continue. No active probes are requested. Dry-run and `skip_sibling_tools` prevent this invocation.
+
+Other sibling tools still contribute sampled text. Subprocess execution time and captured output remain unbounded; the JSON validation limit does not bound process memory or duration.
 
 ## Config example
 
